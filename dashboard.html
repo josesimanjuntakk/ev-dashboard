@@ -465,6 +465,12 @@ const SHEET_ID = '1GqTGdcT3Orykm9-8c6FDZxBOF4DXKnXZpycr5erX5D4';
 const SURVEY_SHEET = 'Master Data Survey';
 const CONS_SHEET = 'Master Data Cons';
 
+// Global state
+let surveyData = [];
+let consData = [];
+let currentTab = 'survey';
+let selectedWO = 'ALL';
+
 // =============================================
 // FETCH via Google Visualization JSONP
 // Tidak butuh CSV — cukup sheet sudah di-publish as web page
@@ -480,7 +486,7 @@ function fetchSheet(sheetName) {
         'Master Data Cons': '715410530'
       };
       const gid = sheetGids[sheetName] || '0';
-      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&sheet=${encodeURIComponent(sheetName)}&gid=${gid}`;
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
 
       const resp = await fetch(url);
       if (!resp.ok) throw new Error(`HTTP ${resp.status} saat fetch sheet: ${sheetName}`);
