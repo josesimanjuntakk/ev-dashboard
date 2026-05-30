@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EV Charging Monitor — PT Galaxy Tiga Serangkai</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f1e;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --approved: #10b981;
+    --canceled: #ef4444;
+    --pending: #f59e0b;
+    --belum: #6b7280;
+    --done-c: #10b981;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --evcs: #3b82f6;
+    --bss: #a855f7;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(0,229,255,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(124,58,237,0.05) 0%, transparent 50%);
+  }
+
+  /* HEADER */
+  .header {
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .header-left { display: flex; flex-direction: column; gap: 4px; }
+  .logo-tag { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--accent); letter-spacing: 3px; text-transform: uppercase; }
+  .header h1 { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+  .header h1 span { color: var(--accent); }
+  .company-tag { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+  .header-right { text-align: right; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
+  .header-total { font-size: 28px; font-weight: 800; color: #fff; line-height: 1; font-family: 'Syne', sans-serif; }
+
+  /* TAB NAV */
+  .tab-nav {
+    padding: 0 40px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .tab-btn {
+    padding: 14px 28px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: -1px;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* WO SELECTOR */
+  .wo-selector-bar {
+    padding: 14px 40px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .wo-label { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; white-space: nowrap; }
+  .wo-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+    min-width: 260px;
+  }
+  .wo-select:hover, .wo-select:focus { border-color: var(--accent); }
+  .wo-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .wo-chip {
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: transparent;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .wo-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .wo-chip.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+  .wo-chip.all-chip.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+
+  /* MAIN */
+  .main { padding: 28px 40px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* KPI */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); }
+  .kpi-card.green::before { background: var(--approved); }
+  .kpi-card.red::before { background: var(--canceled); }
+  .kpi-card.yellow::before { background: var(--pending); }
+  .kpi-card.purple::before { background: var(--accent2); }
+  .kpi-card.blue::before { background: var(--evcs); }
+  .kpi-label { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .kpi-value { font-size: 30px; font-weight: 800; color: #fff; line-height: 1; }
+  .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 6px; font-family: 'DM Mono', monospace; }
+
+  /* PROGRESS */
+  .progress-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 28px; }
+  .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .progress-title { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; }
+  .progress-pct { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 700; color: var(--accent); }
+  .progress-bar-wrap { background: var(--surface2); border-radius: 999px; height: 10px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
+
+  /* TWO COL */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* PANEL */
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .panel-header { padding: 14px 20px; border-bottom: 1px solid var(--border); font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; }
+  .panel-body { padding: 16px 20px; }
+
+  /* STAT ROW */
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-row-label { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot.approved { background: var(--approved); }
+  .dot.canceled { background: var(--canceled); }
+  .dot.belum { background: var(--belum); }
+  .dot.done-c { background: var(--done-c); }
+  .dot.evcs { background: var(--evcs); }
+  .dot.bss { background: var(--bss); }
+  .stat-row-right { display: flex; align-items: center; gap: 12px; font-family: 'DM Mono', monospace; font-size: 12px; }
+  .stat-count { font-weight: 700; color: #fff; font-size: 15px; }
+  .stat-pct { color: var(--text-muted); width: 42px; text-align: right; }
+  .mini-bar { width: 80px; height: 4px; background: var(--surface2); border-radius: 999px; overflow: hidden; }
+  .mini-bar-fill { height: 100%; border-radius: 999px; transition: width 0.6s; }
+
+  /* AREA GRID */
+  .area-grid { display: grid; grid-template-columns: 1fr auto auto; gap: 0; }
+  .area-grid-header { display: contents; font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text-muted); letter-spacing: 1.5px; }
+  .area-grid-header div { padding: 0 0 10px 0; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .area-row { display: contents; }
+  .area-row div { padding: 9px 0; border-bottom: 1px solid rgba(30,45,69,0.5); font-size: 13px; }
+  .area-row:last-child div { border-bottom: none; }
+  .area-pct-cell { font-family: 'DM Mono', monospace; color: var(--text-muted); font-size: 12px; text-align: right; }
+  .area-count-cell { font-family: 'DM Mono', monospace; font-weight: 700; color: #fff; text-align: right; padding-right: 16px !important; }
+
+  /* CONS CONSTRUCTION PANEL */
+  .cons-item-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .cons-item-row:last-child { border-bottom: none; }
+  .cons-item-label { font-size: 13px; min-width: 100px; }
+  .cons-bar-wrap { flex: 1; background: var(--surface2); border-radius: 999px; height: 6px; overflow: hidden; }
+  .cons-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--approved), var(--accent)); transition: width 0.6s; }
+  .cons-item-pct { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); min-width: 40px; text-align: right; }
+  .cons-item-count { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 700; color: #fff; min-width: 30px; text-align: right; }
+
+  /* TABLE */
+  .table-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 28px; }
+  .table-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+  .table-title { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; }
+  .table-count { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { padding: 10px 14px; text-align: left; font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; background: var(--surface2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(0,229,255,0.03); }
+  tbody td { padding: 10px 14px; font-size: 12px; vertical-align: middle; }
+  .td-no { color: var(--text-muted); font-family: 'DM Mono', monospace; }
+  .td-site { font-weight: 600; max-width: 200px; }
+  .td-area { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+  .td-wo { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
+  .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-family: 'DM Mono', monospace; font-weight: 600; letter-spacing: 0.5px; white-space: nowrap; }
+  .badge-evcs { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .badge-bss { background: rgba(168,85,247,0.15); color: #c084fc; }
+  .badge-approved { background: rgba(16,185,129,0.15); color: #34d399; }
+  .badge-canceled { background: rgba(239,68,68,0.15); color: #f87171; }
+  .badge-belum { background: rgba(107,114,128,0.15); color: #9ca3af; }
+  .badge-done { background: rgba(16,185,129,0.15); color: #34d399; }
+  .done-check { color: var(--approved); font-size: 14px; }
+  .done-empty { color: var(--text-muted); font-size: 14px; }
+  .td-remarks { max-width: 220px; font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+  .finish-pct { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 700; }
+
+  /* LOADING */
+  .loading-overlay { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 40px; gap: 16px; }
+  .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); letter-spacing: 2px; }
+
+  /* ERROR */
+  .error-box { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 20px 24px; margin: 20px 0; font-family: 'DM Mono', monospace; font-size: 12px; color: #f87171; }
+
+  /* FOOTER */
+  .footer { padding: 20px 40px; border-top: 1px solid var(--border); font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-muted); display: flex; gap: 20px; flex-wrap: wrap; justify-content: space-between; }
+  .last-update { color: var(--accent); }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .animate-in { animation: fadeIn 0.3s ease forwards; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo-tag">⚡ EV Charging Monitor</div>
+    <h1>PT Galaxy Tiga <span>Serangkai</span></h1>
+    <div class="company-tag">Real-time dari Google Sheets · Auto-updated</div>
+  </div>
+  <div class="header-right">
+    <div class="header-total" id="header-total">—</div>
+    <div>TOTAL SITE KESELURUHAN</div>
+  </div>
+</div>
+
+<!-- TAB NAV -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('survey')">⚡ WO Survey</button>
+  <button class="tab-btn" onclick="switchTab('cons')">🏗 WO Construction</button>
+</div>
+
+<!-- WO FILTER BAR -->
+<div class="wo-selector-bar">
+  <div class="wo-label">Filter WO :</div>
+  <select class="wo-select" id="wo-select-dropdown" onchange="onDropdownChange(this.value)">
+    <option value="ALL">Semua WO (All)</option>
+  </select>
+  <div class="wo-chips" id="wo-chips"></div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- SURVEY TAB -->
+  <div class="tab-content active" id="tab-survey">
+    <div id="survey-loading" class="loading-overlay">
+      <div class="spinner"></div>
+      <div class="loading-text">MEMUAT DATA SURVEY...</div>
+    </div>
+    <div id="survey-content" style="display:none;">
+      <!-- KPI -->
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Total Site</div><div class="kpi-value" id="s-kpi-total">—</div><div class="kpi-sub" id="s-kpi-wo">— WO</div></div>
+        <div class="kpi-card green"><div class="kpi-label">Done Gambar</div><div class="kpi-value" id="s-kpi-done">—</div><div class="kpi-sub" id="s-kpi-done-pct">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Approved</div><div class="kpi-value" id="s-kpi-approved">—</div><div class="kpi-sub" id="s-kpi-approved-pct">—</div></div>
+        <div class="kpi-card red"><div class="kpi-label">Canceled / Issue</div><div class="kpi-value" id="s-kpi-canceled">—</div><div class="kpi-sub" id="s-kpi-canceled-pct">—</div></div>
+        <div class="kpi-card blue"><div class="kpi-label">EVCS</div><div class="kpi-value" id="s-kpi-evcs">—</div><div class="kpi-sub">site EVCS</div></div>
+        <div class="kpi-card purple"><div class="kpi-label">BSS</div><div class="kpi-value" id="s-kpi-bss">—</div><div class="kpi-sub">site BSS</div></div>
+      </div>
+      <!-- PROGRESS -->
+      <div class="progress-section">
+        <div class="progress-header">
+          <div class="progress-title">Progress Done Gambar</div>
+          <div class="progress-pct" id="s-progress-pct">0%</div>
+        </div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="s-progress-bar" style="width:0%"></div></div>
+      </div>
+      <!-- CHARTS ROW -->
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-header">Status WO Approved</div>
+          <div class="panel-body">
+            <div class="stat-row">
+              <div class="stat-row-label"><div class="dot approved"></div>Approved</div>
+              <div class="stat-row-right"><div class="mini-bar"><div class="mini-bar-fill" id="s-bar-approved" style="background:var(--approved)"></div></div><div class="stat-pct" id="s-pct-approved">—</div><div class="stat-count" id="s-cnt-approved">—</div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-row-label"><div class="dot canceled"></div>Canceled / Issue</div>
+              <div class="stat-row-right"><div class="mini-bar"><div class="mini-bar-fill" id="s-bar-canceled" style="background:var(--canceled)"></div></div><div class="stat-pct" id="s-pct-canceled">—</div><div class="stat-count" id="s-cnt-canceled">—</div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-row-label"><div class="dot belum"></div>Belum Diisi</div>
+              <div class="stat-row-right"><div class="mini-bar"><div class="mini-bar-fill" id="s-bar-belum" style="background:var(--belum)"></div></div><div class="stat-pct" id="s-pct-belum">—</div><div class="stat-count" id="s-cnt-belum">—</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">Distribusi Area / Provinsi</div>
+          <div class="panel-body">
+            <div class="area-grid">
+              <div class="area-grid-header"><div>PROVINSI</div><div style="text-align:right;padding-right:16px;">JML</div><div style="text-align:right;">%</div></div>
+              <div id="s-area-rows" style="display:contents;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-header">Distribusi Tipe WO Survey</div>
+          <div class="panel-body">
+            <div class="stat-row">
+              <div class="stat-row-label"><div class="dot evcs"></div>EVCS</div>
+              <div class="stat-row-right"><div class="mini-bar"><div class="mini-bar-fill" id="s-bar-evcs" style="background:var(--evcs)"></div></div><div class="stat-pct" id="s-pct-evcs">—</div><div class="stat-count" id="s-cnt-evcs">—</div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-row-label"><div class="dot bss"></div>BSS</div>
+              <div class="stat-row-right"><div class="mini-bar"><div class="mini-bar-fill" id="s-bar-bss" style="background:var(--bss)"></div></div><div class="stat-pct" id="s-pct-bss">—</div><div class="stat-count" id="s-cnt-bss">—</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">Progress Per WO</div>
+          <div class="panel-body" id="s-wo-progress" style="display:flex;flex-direction:column;gap:12px;"></div>
+        </div>
+      </div>
+      <!-- TABLE -->
+      <div class="table-section">
+        <div class="table-header">
+          <div class="table-title">Detail Site</div>
+          <div class="table-count" id="s-table-count">— sites</div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>No</th><th>Nama Site</th><th>Area</th><th>WO</th><th>Tipe</th><th>LOT</th><th>Gambar</th><th>Status</th><th>Update / Remarks</th></tr></thead>
+            <tbody id="s-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONS TAB -->
+  <div class="tab-content" id="tab-cons">
+    <div id="cons-loading" class="loading-overlay">
+      <div class="spinner"></div>
+      <div class="loading-text">MEMUAT DATA CONSTRUCTION...</div>
+    </div>
+    <div id="cons-content" style="display:none;">
+      <!-- KPI -->
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Total Site</div><div class="kpi-value" id="c-kpi-total">—</div><div class="kpi-sub" id="c-kpi-wo">— WO</div></div>
+        <div class="kpi-card green"><div class="kpi-label">Avg. Finish</div><div class="kpi-value" id="c-kpi-finish">—</div><div class="kpi-sub">rata-rata progress</div></div>
+        <div class="kpi-card"><div class="kpi-label">Done</div><div class="kpi-value" id="c-kpi-done">—</div><div class="kpi-sub" id="c-kpi-done-pct">—</div></div>
+        <div class="kpi-card red"><div class="kpi-label">Canceled / Issue</div><div class="kpi-value" id="c-kpi-canceled">—</div><div class="kpi-sub" id="c-kpi-canceled-pct">—</div></div>
+        <div class="kpi-card blue"><div class="kpi-label">EVCS</div><div class="kpi-value" id="c-kpi-evcs">—</div><div class="kpi-sub">site EVCS</div></div>
+        <div class="kpi-card purple"><div class="kpi-label">BSS</div><div class="kpi-value" id="c-kpi-bss">—</div><div class="kpi-sub">site BSS</div></div>
+      </div>
+      <!-- PROGRESS -->
+      <div class="progress-section">
+        <div class="progress-header">
+          <div class="progress-title">Overall Avg. Construction Finish</div>
+          <div class="progress-pct" id="c-progress-pct">0%</div>
+        </div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="c-progress-bar" style="width:0%"></div></div>
+      </div>
+      <!-- CHARTS -->
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-header">Status WO Completion</div>
+          <div class="panel-body">
+            <div class="stat-row">
+              <div class="stat-row-label"><div class="dot done-c"></div>Done</div>
+              <div class="stat-row-right"><div class="mini-bar"><div class="mini-bar-fill" id="c-bar-done" style="background:var(--done-c)"></div></div><div class="stat-pct" id="c-pct-done">—</div><div class="stat-count" id="c-cnt-done">—</div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-row-label"><div class="dot canceled"></div>Canceled / Issue</div>
+              <div class="stat-row-right"><div class="mini-bar"><div class="mini-bar-fill" id="c-bar-canceled" style="background:var(--canceled)"></div></div><div class="stat-pct" id="c-pct-canceled">—</div><div class="stat-count" id="c-cnt-canceled">—</div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-row-label"><div class="dot belum"></div>Belum Diisi</div>
+              <div class="stat-row-right"><div class="mini-bar"><div class="mini-bar-fill" id="c-bar-belum" style="background:var(--belum)"></div></div><div class="stat-pct" id="c-pct-belum">—</div><div class="stat-count" id="c-cnt-belum">—</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">Distribusi Area / Provinsi</div>
+          <div class="panel-body">
+            <div class="area-grid">
+              <div class="area-grid-header"><div>PROVINSI</div><div style="text-align:right;padding-right:16px;">JML</div><div style="text-align:right;">%</div></div>
+              <div id="c-area-rows" style="display:contents;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-header">Progress Per Item Konstruksi</div>
+          <div class="panel-body" id="c-cons-items"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">Progress Per WO</div>
+          <div class="panel-body" id="c-wo-progress" style="display:flex;flex-direction:column;gap:12px;"></div>
+        </div>
+      </div>
+      <!-- TABLE -->
+      <div class="table-section">
+        <div class="table-header">
+          <div class="table-title">Detail Site Construction</div>
+          <div class="table-count" id="c-table-count">— sites</div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>No</th><th>Nama Site</th><th>Area</th><th>WO</th><th>Tipe</th><th>LOT</th>
+                <th>Pondasi</th><th>Charger</th><th>Panel</th><th>Cable</th><th>APAR</th><th>Parking</th>
+                <th>Finish</th><th>Status</th><th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody id="c-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <span>⚡ EV Charging Monitor · PT Galaxy Tiga Serangkai</span>
+  <span class="last-update" id="last-update">Memuat data...</span>
+</div>
+
+<script>
+// =============================================
+// CONFIG
+// =============================================
+const SHEET_ID = '1GqTGdcT3Orykm9-8c6FDZxBOF4DXKnXZpycr5erX5D4';
+const SURVEY_SHEET = 'Master Data Survey';
+const CONS_SHEET = 'Master Data Cons';
+
+// Google Sheets public CSV export URL
+const csvUrl = (sheetName) =>
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+
+// =============================================
+// STATE
+// =============================================
+let surveyData = [];
+let consData = [];
+let currentTab = 'survey';
+let selectedWO = 'ALL';
+
+// =============================================
+// FETCH & PARSE CSV
+// =============================================
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const headers = parseCSVLine(lines[0]);
+  return lines.slice(1).map(line => {
+    const vals = parseCSVLine(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h.trim()] = (vals[i] || '').trim(); });
+    return obj;
+  }).filter(row => Object.values(row).some(v => v !== ''));
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i+1] === '"') { current += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current); current = '';
+    } else current += ch;
+  }
+  result.push(current);
+  return result;
+}
+
+async function fetchSheet(sheetName) {
+  const res = await fetch(csvUrl(sheetName));
+  if (!res.ok) throw new Error(`Gagal fetch sheet: ${sheetName}`);
+  const text = await res.text();
+  return parseCSV(text);
+}
+
+// =============================================
+// INIT
+// =============================================
+async function init() {
+  try {
+    // Fetch Survey data
+    const rawSurvey = await fetchSheet(SURVEY_SHEET);
+    surveyData = rawSurvey.map(r => ({
+      no: r['No.'] || r['No'] || '',
+      wo: r['Kode Working Order'] || '',
+      tipe: r['Tipe WO Survey'] || '',
+      lot: r['Total LOT'] || '',
+      site: r['Nama Site'] || '',
+      area: r['Area'] || '',
+      done_gambar: r['Done Gambar'] || '',
+      remarks: r['Update / Remarks'] || '',
+      status: r['Status WO'] || 'Belum Diisi',
+    })).filter(r => r.wo && r.site);
+
+    document.getElementById('survey-loading').style.display = 'none';
+    document.getElementById('survey-content').style.display = 'block';
+
+    // Fetch Cons data  
+    let rawCons = [];
+    try {
+      rawCons = await fetchSheet(CONS_SHEET);
+    } catch(e) {
+      console.warn('Cons sheet belum ada data atau belum dibuat:', e);
+    }
+    consData = rawCons.map(r => ({
+      no: r['No.'] || r['No'] || '',
+      wo: r['Kode Working Order'] || '',
+      tipe: r['Tipe WO Cons'] || '',
+      lot: r['Total LOT'] || '',
+      site: r['Nama Site'] || '',
+      area: r['Area'] || '',
+      proses: r['Proses Cons'] || '',
+      pondasi: r['Pondasi'] || '',
+      charger: r['Charger'] || '',
+      panel: r['Panel'] || '',
+      cable: r['Cable'] || '',
+      apar: r['APAR'] || '',
+      parking: r['Parking Lot'] || '',
+      finish: r['Finish (%)'] || '',
+      remarks: r['Update / Remarks'] || '',
+      status: r['Status WO Completion'] || 'Belum Diisi',
+    })).filter(r => r.wo && r.site);
+
+    document.getElementById('cons-loading').style.display = 'none';
+    document.getElementById('cons-content').style.display = 'block';
+
+    // Update header total
+    const totalAll = surveyData.length + consData.length;
+    document.getElementById('header-total').textContent = totalAll;
+
+    // Update last update time
+    document.getElementById('last-update').textContent =
+      'Update: ' + new Date().toLocaleString('id-ID', {dateStyle:'medium', timeStyle:'short'});
+
+    // Init WO controls and render
+    initWOControls();
+    renderCurrentTab();
+
+  } catch(err) {
+    console.error(err);
+    document.getElementById('survey-loading').innerHTML =
+      `<div class="error-box">❌ Gagal memuat data.<br><br>Pastikan Google Sheets sudah di-publish ke web (File → Share → Publish to web).<br><br>Error: ${err.message}</div>`;
+    document.getElementById('cons-loading').innerHTML = '';
+  }
+}
+
+// =============================================
+// TAB SWITCHING
+// =============================================
+function switchTab(tab) {
+  currentTab = tab;
+  selectedWO = 'ALL';
+
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', (i === 0 && tab === 'survey') || (i === 1 && tab === 'cons'));
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+
+  initWOControls();
+  renderCurrentTab();
+}
+
+// =============================================
+// WO CONTROLS
+// =============================================
+function getUniqueWOs(data) {
+  const seen = new Set();
+  return data.filter(d => { if (!seen.has(d.wo)) { seen.add(d.wo); return true; } return false; }).map(d => d.wo);
+}
+
+function shortWO(wo) { return wo.split('/').pop(); }
+
+function initWOControls() {
+  const data = currentTab === 'survey' ? surveyData : consData;
+  const wos = getUniqueWOs(data);
+  const dropdown = document.getElementById('wo-select-dropdown');
+  const chips = document.getElementById('wo-chips');
+
+  dropdown.innerHTML = '<option value="ALL">Semua WO (All)</option>';
+  chips.innerHTML = '';
+
+  const allChip = document.createElement('button');
+  allChip.className = 'wo-chip all-chip' + (selectedWO === 'ALL' ? ' active' : '');
+  allChip.textContent = 'ALL';
+  allChip.onclick = () => selectWO('ALL');
+  chips.appendChild(allChip);
+
+  wos.forEach(wo => {
+    const opt = document.createElement('option');
+    opt.value = wo; opt.textContent = wo;
+    dropdown.appendChild(opt);
+
+    const chip = document.createElement('button');
+    chip.className = 'wo-chip' + (selectedWO === wo ? ' active' : '');
+    chip.textContent = shortWO(wo);
+    chip.title = wo;
+    chip.onclick = () => selectWO(wo);
+    chips.appendChild(chip);
+  });
+
+  dropdown.value = selectedWO;
+}
+
+function onDropdownChange(val) { selectWO(val); }
+
+function selectWO(wo) {
+  selectedWO = wo;
+  document.getElementById('wo-select-dropdown').value = wo;
+  document.querySelectorAll('.wo-chip').forEach(chip => {
+    if (chip.classList.contains('all-chip')) chip.classList.toggle('active', wo === 'ALL');
+    else chip.classList.toggle('active', chip.title === wo);
+  });
+  renderCurrentTab();
+}
+
+// =============================================
+// RENDER
+// =============================================
+function renderCurrentTab() {
+  if (currentTab === 'survey') renderSurvey();
+  else renderCons();
+}
+
+function fmt(n) { return Math.round(n * 100) + '%'; }
+function pctOf(a, b) { return b > 0 ? a / b : 0; }
+
+// ── SURVEY ──────────────────────────────────────────────────────────────────
+function renderSurvey() {
+  const all = surveyData;
+  const data = selectedWO === 'ALL' ? all : all.filter(d => d.wo === selectedWO);
+  const total = data.length;
+
+  const doneCount     = data.filter(d => d.done_gambar === 'Done').length;
+  const approvedCount = data.filter(d => d.status === 'Approved').length;
+  const canceledCount = data.filter(d => d.status === 'Canceled/Issue').length;
+  const belumCount    = data.filter(d => !d.status || d.status === 'Belum Diisi').length;
+  const evcsCount     = data.filter(d => d.tipe === 'EVCS').length;
+  const bssCount      = data.filter(d => d.tipe === 'BSS').length;
+  const woSet         = new Set(data.map(d => d.wo));
+  const donePct       = pctOf(doneCount, total);
+
+  setText('s-kpi-total', total);
+  setText('s-kpi-wo', woSet.size + ' WO');
+  setText('s-kpi-done', doneCount);
+  setText('s-kpi-done-pct', fmt(donePct) + ' dari total');
+  setText('s-kpi-approved', approvedCount);
+  setText('s-kpi-approved-pct', fmt(pctOf(approvedCount, total)) + ' dari total');
+  setText('s-kpi-canceled', canceledCount);
+  setText('s-kpi-canceled-pct', fmt(pctOf(canceledCount, total)) + ' dari total');
+  setText('s-kpi-evcs', evcsCount);
+  setText('s-kpi-bss', bssCount);
+
+  setText('s-progress-pct', fmt(donePct));
+  setWidth('s-progress-bar', fmt(donePct));
+
+  setBar('s-bar-approved', 's-pct-approved', 's-cnt-approved', approvedCount, total);
+  setBar('s-bar-canceled', 's-pct-canceled', 's-cnt-canceled', canceledCount, total);
+  setBar('s-bar-belum',    's-pct-belum',    's-cnt-belum',    belumCount, total);
+  setBar('s-bar-evcs',     's-pct-evcs',     's-cnt-evcs',     evcsCount, total);
+  setBar('s-bar-bss',      's-pct-bss',      's-cnt-bss',      bssCount, total);
+
+  renderAreaRows('s-area-rows', data, total);
+  renderWOProgress('s-wo-progress', selectedWO === 'ALL' ? getUniqueWOs(all) : [selectedWO], all, 'done_gambar', 'Done');
+  renderSurveyTable(data);
+}
+
+function renderSurveyTable(data) {
+  setText('s-table-count', data.length + ' sites');
+  const tbody = document.getElementById('s-table-body');
+  tbody.innerHTML = data.map((row, i) => {
+    const tipeBadge = row.tipe === 'EVCS' ? 'badge-evcs' : 'badge-bss';
+    const stBadge = row.status === 'Approved' ? 'badge-approved' : row.status === 'Canceled/Issue' ? 'badge-canceled' : 'badge-belum';
+    const gambar = row.done_gambar === 'Done' ? '<span class="done-check">✓</span>' : '<span class="done-empty">—</span>';
+    return `<tr>
+      <td class="td-no">${row.no || i+1}</td>
+      <td class="td-site">${esc(row.site)}</td>
+      <td class="td-area">${esc(row.area)}</td>
+      <td class="td-wo">${shortWO(row.wo)}</td>
+      <td><span class="badge ${tipeBadge}">${row.tipe}</span></td>
+      <td style="text-align:center;font-family:'DM Mono',monospace">${row.lot}</td>
+      <td style="text-align:center">${gambar}</td>
+      <td><span class="badge ${stBadge}">${row.status || 'Belum Diisi'}</span></td>
+      <td class="td-remarks">${esc(row.remarks)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── CONS ─────────────────────────────────────────────────────────────────────
+const CONS_ITEMS = ['pondasi','charger','panel','cable','apar','parking'];
+const CONS_LABELS = ['Pondasi','Charger','Panel','Cable','APAR','Parking Lot'];
+
+function calcFinish(row) {
+  const items = CONS_ITEMS.map(k => row[k]);
+  const done = items.filter(v => v === 'Done').length;
+  return items.some(v => v !== '') ? Math.round((done / 6) * 100) : null;
+}
+
+function renderCons() {
+  const all = consData;
+  const data = selectedWO === 'ALL' ? all : all.filter(d => d.wo === selectedWO);
+  const total = data.length;
+
+  const doneCount     = data.filter(d => d.status === 'Done').length;
+  const canceledCount = data.filter(d => d.status === 'Canceled/Issue').length;
+  const belumCount    = data.filter(d => !d.status || d.status === 'Belum Diisi').length;
+  const evcsCount     = data.filter(d => d.tipe === 'EVCS').length;
+  const bssCount      = data.filter(d => d.tipe === 'BSS').length;
+  const woSet         = new Set(data.map(d => d.wo));
+
+  const finishVals = data.map(r => calcFinish(r)).filter(v => v !== null);
+  const avgFinish = finishVals.length > 0 ? Math.round(finishVals.reduce((a,b) => a+b, 0) / finishVals.length) : 0;
+
+  setText('c-kpi-total', total);
+  setText('c-kpi-wo', woSet.size + ' WO');
+  setText('c-kpi-finish', avgFinish + '%');
+  setText('c-kpi-done', doneCount);
+  setText('c-kpi-done-pct', fmt(pctOf(doneCount, total)) + ' dari total');
+  setText('c-kpi-canceled', canceledCount);
+  setText('c-kpi-canceled-pct', fmt(pctOf(canceledCount, total)) + ' dari total');
+  setText('c-kpi-evcs', evcsCount);
+  setText('c-kpi-bss', bssCount);
+
+  setText('c-progress-pct', avgFinish + '%');
+  setWidth('c-progress-bar', avgFinish + '%');
+
+  setBar('c-bar-done',     'c-pct-done',     'c-cnt-done',     doneCount, total);
+  setBar('c-bar-canceled', 'c-pct-canceled', 'c-cnt-canceled', canceledCount, total);
+  setBar('c-bar-belum',    'c-pct-belum',    'c-cnt-belum',    belumCount, total);
+
+  renderAreaRows('c-area-rows', data, total);
+  renderConsItems(data, total);
+  renderWOProgress('c-wo-progress', selectedWO === 'ALL' ? getUniqueWOs(all) : [selectedWO], all, null, null, true);
+  renderConsTable(data);
+}
+
+function renderConsItems(data, total) {
+  const el = document.getElementById('c-cons-items');
+  el.innerHTML = CONS_ITEMS.map((key, i) => {
+    const doneCount = data.filter(r => r[key] === 'Done').length;
+    const pct = pctOf(doneCount, total);
+    return `<div class="cons-item-row">
+      <div class="cons-item-label">${CONS_LABELS[i]}</div>
+      <div class="cons-bar-wrap"><div class="cons-bar-fill" style="width:${fmt(pct)}"></div></div>
+      <div class="cons-item-pct">${fmt(pct)}</div>
+      <div class="cons-item-count">${doneCount}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderConsTable(data) {
+  setText('c-table-count', data.length + ' sites');
+  const tbody = document.getElementById('c-table-body');
+  tbody.innerHTML = data.map((row, i) => {
+    const tipeBadge = row.tipe === 'EVCS' ? 'badge-evcs' : 'badge-bss';
+    const stBadge = row.status === 'Done' ? 'badge-done' : row.status === 'Canceled/Issue' ? 'badge-canceled' : 'badge-belum';
+    const finish = calcFinish(row);
+    const finishColor = finish === null ? 'var(--text-muted)' : finish === 100 ? 'var(--approved)' : finish >= 50 ? 'var(--pending)' : 'var(--canceled)';
+    const itemCell = (val) => val === 'Done'
+      ? '<span class="done-check" style="font-size:12px">✓</span>'
+      : val === 'Pending'
+        ? '<span style="color:var(--pending);font-size:11px">⏳</span>'
+        : '<span class="done-empty">—</span>';
+    return `<tr>
+      <td class="td-no">${row.no || i+1}</td>
+      <td class="td-site">${esc(row.site)}</td>
+      <td class="td-area">${esc(row.area)}</td>
+      <td class="td-wo">${shortWO(row.wo)}</td>
+      <td><span class="badge ${tipeBadge}">${row.tipe}</span></td>
+      <td style="text-align:center;font-family:'DM Mono',monospace">${row.lot}</td>
+      <td style="text-align:center">${itemCell(row.pondasi)}</td>
+      <td style="text-align:center">${itemCell(row.charger)}</td>
+      <td style="text-align:center">${itemCell(row.panel)}</td>
+      <td style="text-align:center">${itemCell(row.cable)}</td>
+      <td style="text-align:center">${itemCell(row.apar)}</td>
+      <td style="text-align:center">${itemCell(row.parking)}</td>
+      <td style="text-align:center"><span class="finish-pct" style="color:${finishColor}">${finish !== null ? finish + '%' : '—'}</span></td>
+      <td><span class="badge ${stBadge}">${row.status || 'Belum Diisi'}</span></td>
+      <td class="td-remarks">${esc(row.remarks)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── SHARED HELPERS ────────────────────────────────────────────────────────────
+function renderAreaRows(elId, data, total) {
+  const counts = {};
+  data.forEach(d => { counts[d.area] = (counts[d.area] || 0) + 1; });
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  document.getElementById(elId).innerHTML = sorted.map(([area, cnt]) => `
+    <div class="area-row">
+      <div>${esc(area)}</div>
+      <div class="area-count-cell">${cnt}</div>
+      <div class="area-pct-cell">${fmt(pctOf(cnt, total))}</div>
+    </div>`).join('');
+}
+
+function renderWOProgress(elId, wos, allData, doneKey, doneVal, useCons = false) {
+  const el = document.getElementById(elId);
+  el.innerHTML = wos.map(wo => {
+    const wdata = allData.filter(d => d.wo === wo);
+    const wtotal = wdata.length;
+    let wpct;
+    if (useCons) {
+      const finishVals = wdata.map(r => calcFinish(r)).filter(v => v !== null);
+      wpct = finishVals.length > 0 ? Math.round(finishVals.reduce((a,b)=>a+b,0)/finishVals.length) : 0;
+    } else {
+      const wdone = wdata.filter(d => d[doneKey] === doneVal).length;
+      wpct = wtotal > 0 ? Math.round((wdone/wtotal)*100) : 0;
+    }
+    const tipes = [...new Set(wdata.map(d => d.tipe))].join(' + ');
+    return `<div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);">${shortWO(wo)} <span style="opacity:0.6">${tipes}</span></div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);">${wtotal} site · ${wpct}%</div>
+      </div>
+      <div class="progress-bar-wrap" style="height:6px;">
+        <div class="progress-bar-fill" style="width:${wpct}%"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setBar(barId, pctId, cntId, count, total) {
+  const pct = pctOf(count, total);
+  setWidth(barId, fmt(pct));
+  setText(pctId, fmt(pct));
+  setText(cntId, count);
+}
+
+function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+function setWidth(id, val) { const el = document.getElementById(id); if (el) el.style.width = val; }
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// =============================================
+// START
+// =============================================
+init();
+</script>
+</body>
+</html>
