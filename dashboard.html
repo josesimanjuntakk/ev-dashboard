@@ -477,7 +477,7 @@ function fetchSheet(sheetName) {
       // Cari GID sheet berdasarkan nama
       const sheetGids = {
         'Master Data Survey': '0',
-        'Master Data Cons': '1'
+        'Master Data Cons': '715410530'
       };
       const gid = sheetGids[sheetName] || '0';
       const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&sheet=${encodeURIComponent(sheetName)}&gid=${gid}`;
