@@ -745,9 +745,17 @@ const CONS_ITEMS = ['pondasi','charger','panel','cable','apar','parking'];
 const CONS_LABELS = ['Pondasi','Charger','Panel','Cable','APAR','Parking Lot'];
 
 function calcFinish(row) {
-  const items = CONS_ITEMS.map(k => row[k]);
-  const done = items.filter(v => v === 'Done').length;
-  return items.some(v => v !== '') ? Math.round((done / 6) * 100) : null;
+  const isBSS = row.tipe && row.tipe.includes('BSS') && !row.tipe.includes('EVCS');
+  const keys = isBSS ? ['charger','panel','cable'] : CONS_ITEMS;
+  const vals = keys.map(k => {
+    const v = row[k];
+    if (v === '' || v === null || v === undefined) return null;
+    const n = parseFloat(v);
+    return isNaN(n) ? null : Math.min(100, Math.max(0, n));
+  });
+  const filled = vals.filter(v => v !== null);
+  if (filled.length === 0) return null;
+  return Math.round(filled.reduce((a, b) => a + b, 0) / keys.length);
 }
 
 function renderCons() {
@@ -807,14 +815,24 @@ function renderConsTable(data) {
   const tbody = document.getElementById('c-table-body');
   tbody.innerHTML = data.map((row, i) => {
     const tipeBadge = row.tipe === 'EVCS' ? 'badge-evcs' : 'badge-bss';
+    const isBSS = row.tipe && row.tipe.includes('BSS') && !row.tipe.includes('EVCS');
+    const naCell = '<span style="color:var(--text-muted);font-size:10px;opacity:0.4">N/A</span>';
     const stBadge = row.status === 'Done' ? 'badge-done' : row.status === 'Canceled/Issue' ? 'badge-canceled' : 'badge-belum';
     const finish = calcFinish(row);
     const finishColor = finish === null ? 'var(--text-muted)' : finish === 100 ? 'var(--approved)' : finish >= 50 ? 'var(--pending)' : 'var(--canceled)';
-    const itemCell = (val) => val === 'Done'
-      ? '<span class="done-check" style="font-size:12px">✓</span>'
-      : val === 'Pending'
-        ? '<span style="color:var(--pending);font-size:11px">⏳</span>'
-        : '<span class="done-empty">—</span>';
+    const itemCell = (val) => {
+      if (val === '' || val === null || val === undefined) return '<span class="done-empty">—</span>';
+      const n = parseFloat(val);
+      if (!isNaN(n)) {
+        if (n >= 100) return '<span class="done-check" style="font-size:12px">✓</span>';
+        if (n <= 0)   return '<span class="done-empty">—</span>';
+        const color = n >= 75 ? 'var(--approved)' : n >= 40 ? 'var(--pending)' : 'var(--canceled)';
+        return `<span style="color:${color};font-size:11px;font-family:'DM Mono',monospace">${n}%</span>`;
+      }
+      if (val === 'Done') return '<span class="done-check" style="font-size:12px">✓</span>';
+      if (val === 'Pending') return '<span style="color:var(--pending);font-size:11px">⏳</span>';
+      return '<span class="done-empty">—</span>';
+    };
     return `<tr>
       <td class="td-no">${row.no || i+1}</td>
       <td class="td-site">${esc(row.site)}</td>
@@ -822,12 +840,12 @@ function renderConsTable(data) {
       <td class="td-wo">${shortWO(row.wo)}</td>
       <td><span class="badge ${tipeBadge}">${row.tipe}</span></td>
       <td style="text-align:center;font-family:'DM Mono',monospace">${row.lot}</td>
-      <td style="text-align:center">${itemCell(row.pondasi)}</td>
+      <td style="text-align:center">${isBSS ? naCell : itemCell(row.pondasi)}</td>
       <td style="text-align:center">${itemCell(row.charger)}</td>
       <td style="text-align:center">${itemCell(row.panel)}</td>
       <td style="text-align:center">${itemCell(row.cable)}</td>
-      <td style="text-align:center">${itemCell(row.apar)}</td>
-      <td style="text-align:center">${itemCell(row.parking)}</td>
+      <td style="text-align:center">${isBSS ? naCell : itemCell(row.apar)}</td>
+      <td style="text-align:center">${isBSS ? naCell : itemCell(row.parking)}</td>
       <td style="text-align:center"><span class="finish-pct" style="color:${finishColor}">${finish !== null ? finish + '%' : '—'}</span></td>
       <td><span class="badge ${stBadge}">${row.status || 'Belum Diisi'}</span></td>
       <td class="td-remarks">${esc(row.remarks)}</td>
