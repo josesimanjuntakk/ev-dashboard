@@ -579,8 +579,7 @@ async function init() {
     document.getElementById('cons-content').style.display = 'block';
 
     // Update header total
-    const totalAll = surveyData.length + consData.length;
-    document.getElementById('header-total').textContent = totalAll;
+    updateHeaderTotal();
 
     // Update last update time
     document.getElementById('last-update').textContent =
@@ -601,6 +600,11 @@ async function init() {
 // =============================================
 // TAB SWITCHING
 // =============================================
+function updateHeaderTotal() {
+  const total = currentTab === 'survey' ? surveyData.length : consData.length;
+  document.getElementById('header-total').textContent = total;
+}
+
 function switchTab(tab) {
   currentTab = tab;
   selectedWO = 'ALL';
@@ -611,6 +615,7 @@ function switchTab(tab) {
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById(`tab-${tab}`).classList.add('active');
 
+  updateHeaderTotal();
   initWOControls();
   renderCurrentTab();
 }
