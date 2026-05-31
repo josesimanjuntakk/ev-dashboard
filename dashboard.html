@@ -689,8 +689,8 @@ function renderSurvey() {
   const approvedCount = data.filter(d => d.status === 'Approved').length;
   const canceledCount = data.filter(d => d.status === 'Canceled/Issue').length;
   const belumCount    = data.filter(d => !d.status || d.status === 'Belum Diisi').length;
-  const evcsCount     = data.filter(d => d.tipe === 'EVCS').length;
-  const bssCount      = data.filter(d => d.tipe === 'BSS').length;
+  const evcsCount     = data.filter(d => d.tipe.includes('EVCS')).length;
+  const bssCount      = data.filter(d => d.tipe.includes('BSS')).length;
   const woSet         = new Set(data.map(d => d.wo));
   const donePct       = pctOf(doneCount, total);
 
@@ -758,8 +758,8 @@ function renderCons() {
   const doneCount     = data.filter(d => d.status === 'Done').length;
   const canceledCount = data.filter(d => d.status === 'Canceled/Issue').length;
   const belumCount    = data.filter(d => !d.status || d.status === 'Belum Diisi').length;
-  const evcsCount     = data.filter(d => d.tipe === 'EVCS').length;
-  const bssCount      = data.filter(d => d.tipe === 'BSS').length;
+  const evcsCount     = data.filter(d => d.tipe.includes('EVCS')).length;
+  const bssCount      = data.filter(d => d.tipe.includes('BSS')).length;
   const woSet         = new Set(data.map(d => d.wo));
 
   const finishVals = data.map(r => calcFinish(r)).filter(v => v !== null);
@@ -861,7 +861,9 @@ function renderWOProgress(elId, wos, allData, doneKey, doneVal, useCons = false)
       const wdone = wdata.filter(d => d[doneKey] === doneVal).length;
       wpct = wtotal > 0 ? Math.round((wdone/wtotal)*100) : 0;
     }
-    const tipes = [...new Set(wdata.map(d => d.tipe))].join(' + ');
+    const tipes = [...new Set(
+      wdata.flatMap(d => d.tipe.split('+').map(t => t.trim()))
+    )].join(' + ');
     return `<div>
       <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
         <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);">${shortWO(wo)} <span style="opacity:0.6">${tipes}</span></div>
